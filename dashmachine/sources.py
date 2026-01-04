@@ -1,7 +1,7 @@
 import os
 import json
 import random
-from jsmin import jsmin
+
 from flask_login import current_user
 from dashmachine import app
 from dashmachine.main.models import Apps, Tags
@@ -39,8 +39,8 @@ def process_js_sources(process_bundle=None, src=None, app_global=False):
     for source in process_bundle:
         source_path = os.path.join(static_folder, "js", source)
         with open(source_path) as js_file:
-            minified = jsmin(js_file.read(), quote_chars="'\"`")
-            html += f"<script>{minified}</script>"
+            # minified = jsmin(js_file.read(), quote_chars="'\"`")
+            html += f"<script>{js_file.read()}</script>"
 
     return html
 
