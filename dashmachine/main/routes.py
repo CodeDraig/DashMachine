@@ -3,6 +3,7 @@ import glob
 from secrets import token_hex
 
 from configparser import ConfigParser
+from werkzeug.utils import secure_filename
 from flask import render_template, url_for, redirect, request, Blueprint, jsonify
 from flask_login import current_user
 from dashmachine.main.models import Files, Apps, DataSources
@@ -108,6 +109,9 @@ def clearCache():
 @main.route("/tcdrop/deleteCachedFile", methods=["GET"])
 def deleteCachedFile():
     f = request.args.get("file")
+    if not f:
+        return "error: no file specified"
+    f = secure_filename(f)
     path = os.path.join(cache_folder, f)
     Files.query.filter_by(path=path).delete()
     db.session.commit()

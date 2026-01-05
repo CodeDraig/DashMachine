@@ -60,8 +60,8 @@ import requests
 
 
 class Radarr(object):
-    def __init__(self, method, prefix, host, port, api_key, verify):
-        self.endpoint = "/api"
+    def __init__(self, method, prefix, host, port, api_key, api_version, verify):
+        self.endpoint = "/api/" + api_version
         self.method = method
         self.prefix = prefix
         self.host = host
@@ -128,7 +128,7 @@ class Radarr(object):
                 self.error = f"{e}"
 
         if rawdata != None:
-            self.version = rawdata["version"]
+            self.version = rawdata.get("version", "?")
 
     def getMovies(self):
         verify = (
@@ -178,7 +178,8 @@ class Radarr(object):
                 self.error = f"{e}"
 
         if rawdata != None:
-            self.queue = len((rawdata))
+             # v3 returns paged result with totalRecords
+            self.queue = rawdata.get("totalRecords", len(rawdata) if isinstance(rawdata, list) else 0)
 
     def getDiskspace(self):
         verify = (
@@ -250,9 +251,11 @@ class Platform:
             self.api_key = None
         if not hasattr(self, "verify"):
             self.verify = True
+        if not hasattr(self, "api_version"):
+            self.api_version = "v3"
 
         self.radarr = Radarr(
-            self.method, self.prefix, self.host, self.port, self.api_key, self.verify
+            self.method, self.prefix, self.host, self.port, self.api_key, self.api_version, self.verify
         )
 
     def process(self):

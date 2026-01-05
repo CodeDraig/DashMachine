@@ -60,8 +60,8 @@ import requests
 
 
 class Sonarr(object):
-    def __init__(self, method, prefix, host, port, api_key, verify):
-        self.endpoint = "/api"
+    def __init__(self, method, prefix, host, port, api_key, api_version, verify):
+        self.endpoint = "/api/" + api_version
         self.method = method
         self.prefix = prefix
         self.host = host
@@ -128,7 +128,7 @@ class Sonarr(object):
                 self.error = f"{e}"
 
         if rawdata != None:
-            self.version = rawdata["version"]
+            self.version = rawdata.get("version", "?")
 
     def getWanted(self):
         verify = (
@@ -142,8 +142,13 @@ class Sonarr(object):
 
         if self.method.upper() == "GET":
             try:
+                # Wanted missing endpoint structure might vary by version but typically /wanted/missing works or /queue
+                # adjusting for v3 likely requires specific check if v3 logic differs significantly, 
+                # but standard endpoints often remain overlay compatible or redirected.
+                # However, v3 uses /wanted/missing ? 
+                # Checking v3 docs: /api/v3/wanted/missing
                 rawdata = requests.get(
-                    self.prefix + self.host + port + self.endpoint + "/wanted/missing/",
+                    self.prefix + self.host + port + self.endpoint + "/wanted/missing",
                     headers=headers,
                     verify=verify,
                     timeout=10,
@@ -153,7 +158,8 @@ class Sonarr(object):
                 self.error = f"{e}"
 
         if rawdata != None:
-            self.wanted_missing = rawdata["totalRecords"]
+            # v3 returns paged result with totalRecords
+            self.wanted_missing = rawdata.get("totalRecords", 0)
 
     def getQueue(self):
         verify = (
@@ -178,7 +184,8 @@ class Sonarr(object):
                 self.error = f"{e}"
 
         if rawdata != None:
-            self.queue = len(rawdata)
+             # v3 returns paged result with totalRecords
+            self.queue = rawdata.get("totalRecords", len(rawdata) if isinstance(rawdata, list) else 0)
 
     def getDiskspace(self):
         verify = (
@@ -250,9 +257,11 @@ class Platform:
             self.api_key = None
         if not hasattr(self, "verify"):
             self.verify = True
+        if not hasattr(self, "api_version"):
+            self.api_version = "v3"
 
         self.sonarr = Sonarr(
-            self.method, self.prefix, self.host, self.port, self.api_key, self.verify
+            self.method, self.prefix, self.host, self.port, self.api_key, self.api_version, self.verify
         )
 
     def process(self):

@@ -97,10 +97,15 @@ def get_data_source(data_source):
 def resize_template_app_images():
     folder = os.path.join(images_folder, "apps")
     for file in os.listdir(folder):
+        if file.lower().endswith(".svg"):
+            continue
         fp = os.path.join(folder, file)
-        image = Image.open(fp)
-        image.thumbnail((64, 64))
-        image.save(fp)
+        try:
+            image = Image.open(fp)
+            image.thumbnail((64, 64))
+            image.save(fp)
+        except Exception:
+            continue
 
 
 def get_update_message_html():
