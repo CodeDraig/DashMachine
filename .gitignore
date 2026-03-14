@@ -118,6 +118,8 @@ scheduler.db
 
 .idea/
 
+.worktrees/
+
 dashmachine/user_data/
 dashmachine/static/images/icons
 dashmachine/static/images/backgrounds
