@@ -6,6 +6,14 @@ Three new independent platform plugins for displaying external data feeds on the
 
 Three standalone platform plugins in `dashmachine/platform/`, following the existing pattern (each exports a `Platform` class with `__init__` and `process()`). No shared abstraction layer — each plugin is self-contained.
 
+### Common conventions across all three plugins
+
+- **Rendering:** Each plugin defines an inline `self.html_template` Jinja string in `__init__` and renders it via `render_template_string()` in `process()`, matching the `weather.py` pattern. No user-supplied `value_template`.
+- **Return contract:** `process()` returns an HTML string. On error, it returns a `<div class='theme-failure-text'>` message, matching `weather.py`.
+- **Type coercion:** All config values arrive as strings from the INI parser. `__init__` must cast explicitly: `int()` for counts/days, `float()` for coordinates, string comparison for booleans (e.g., `getattr(self, "show_date", "true").lower() == "true"`).
+- **HTTP timeout:** All `requests.get()` calls use `timeout=10`, matching existing plugins.
+- **Docstrings:** Each plugin includes a module-level docstring with INI config example, variable table, and working example — matching the `sonarr.py`/`weather.py` documentation convention.
+
 ## RSS Platform (`platform/rss.py`)
 
 **Config:**
@@ -20,7 +28,7 @@ show_description = true
 
 - Fetches and parses RSS 2.0 and Atom feeds using `feedparser`
 - Displays as a Materialize `collection` list: linked titles, optional dates in muted text, optional truncated descriptions
-- Errors render inline as themed error messages
+- Errors (bad URL, parse failure, timeout) render inline as themed error messages
 
 **New dependency:** `feedparser`
 
@@ -36,11 +44,11 @@ days_ahead = 14
 ```
 
 - Fetches `.ics` files over HTTP (public iCal URLs)
-- Parses with `icalendar` library + `python-dateutil` for recurrence/timezone handling
-- Shows upcoming events within `days_ahead` window, sorted chronologically
+- Parses with `icalendar` library + `recurring-ical-events` for recurrence expansion within the `days_ahead` window
+- Shows upcoming events sorted chronologically
 - Agenda-style `collection` list: event summary, date/time (or "All day"), optional location
 
-**New dependencies:** `icalendar`, `python-dateutil`
+**New dependencies:** `icalendar`, `python-dateutil`, `recurring-ical-events`
 
 **Out of scope:** CalDAV authentication, event creation, multi-calendar merging.
 
@@ -61,22 +69,21 @@ days = 5
 - Imports `get_weather_icon()` and `get_weather_desc()` from existing `weather.py`
 - Shows daily max/min temps, weather icons, precipitation probability
 - Horizontal row of day columns — widget style, visually distinct from list-style cards
-- `days` parameter controls forecast length (1-7, default 5)
+- `days` parameter: clamped to 1-7 range in `__init__`, default 5
+- **Icon handling:** `get_weather_icon()` returns mixed types (emoji strings and CSS class name `"mw-cloudy"`). The forecast template must handle both: if the value contains no spaces and is ASCII-only, treat as a CSS icon class; otherwise render as inline text.
 
 **No new dependencies.** Reuses `requests` and the Open-Meteo API.
 
 **Relationship to `weather.py`:** Separate plugin. `weather.py` = current conditions. `weather_forecast.py` = multi-day outlook. Both can coexist.
 
-## Template Apps
+## Caching
 
-Add template INI files in `template_apps/` for each new platform:
-- `template_apps/rss.ini`
-- `template_apps/icalendar.ini`
-- `template_apps/weather_forecast.ini`
+No plugin-level caching in this iteration. Each `process()` call makes a network request, matching the existing behavior of `weather.py` and other platforms. Flask-Caching is already available in the app if caching is needed later.
 
 ## Dependencies Update
 
-Add to `requirements.txt`:
-- `feedparser`
-- `icalendar`
-- `python-dateutil`
+Add to `requirements.txt` (pinned):
+- `feedparser==6.0.11`
+- `icalendar==6.1.3`
+- `python-dateutil==2.9.0`
+- `recurring-ical-events==3.5.1`
